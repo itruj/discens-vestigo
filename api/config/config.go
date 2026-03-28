@@ -3,13 +3,15 @@ package config
 import "github.com/kelseyhightower/envconfig"
 
 type Config struct {
-	DatabaseName string
+	Port              string `envconfig:"PORT"`
+	DatabaseName      string `envconfig:"DATABASE_NAME"`
+	SessionCookieName string `envconfig:"SESSION_COOKIE_NAME"`
 }
 
 func loadConfig() (*Config, error) {
 	var cfg Config
 
-	err := envconfig.Process("dvest", &cfg)
+	err := envconfig.Process("", &cfg)
 
 	if err != nil {
 		return nil, err

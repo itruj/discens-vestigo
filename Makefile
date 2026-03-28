@@ -10,7 +10,7 @@ staticcheck:
 
 .PHONY: test
 test:
-	go test -race -v -timeout 30s ./...
+	go test -race -v -timeout 30s -coverprofile=coverage.out ./...
 
 .PHONY: tailwind-watch
 tailwind-watch:

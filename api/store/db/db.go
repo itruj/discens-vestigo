@@ -1,7 +1,6 @@
 package db
 
 import (
-	"database/sql"
 	"itruj/discens-vestigo/api/store"
 	"os"
 
@@ -9,31 +8,10 @@ import (
 	"gorm.io/gorm"
 )
 
-type DB interface {
-	Model(value any) (tx *gorm.DB)
-	Rows() (*sql.Rows, error)
-	Select(query any, args ...any) (tx *gorm.DB)
-}
-
-type sqliteDB struct {
-	*gorm.DB
-}
-
-func (d *sqliteDB) Model(value any) (tx *gorm.DB) {
-	return d.DB.Model(value)
-}
-
-func (d *sqliteDB) Rows() (*sql.Rows, error) {
-	return d.DB.Rows()
-}
-
-func (d *sqliteDB) Select(query any, args ...any) (tx *gorm.DB) {
-	return d.DB.Select(query, args...)
-}
-
 func open(dbName string) (*gorm.DB, error) {
-	err := os.MkdirAll("/tmp", 0755)
 
+	// make the temp directory if it doesn't exist
+	err := os.MkdirAll("/tmp", 0755)
 	if err != nil {
 		return nil, err
 	}
@@ -42,13 +20,17 @@ func open(dbName string) (*gorm.DB, error) {
 }
 
 func MustOpen(dbName string) *gorm.DB {
-	db, err := open(dbName)
 
+	if dbName == "" {
+		dbName = "discens-vestigo.db"
+	}
+
+	db, err := open(dbName)
 	if err != nil {
 		panic(err)
 	}
 
-	err = db.AutoMigrate(&store.Card{})
+	err = db.AutoMigrate(&store.User{}, &store.Session{})
 
 	if err != nil {
 		panic(err)
