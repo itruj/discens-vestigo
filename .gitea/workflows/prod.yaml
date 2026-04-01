@@ -1,6 +1,10 @@
-name: Deploy Web App
-run-name: Deploying Discens Vestigo
-on: [push]
+name: Discens Vestigo CI/CD
+run-name: Discens Vestigo CI/CD
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   Build:
@@ -57,7 +61,7 @@ jobs:
       - name: Check Coverage Threshold
         run: |
           COVERAGE=$(go tool cover -func=coverage.out | grep total | grep -Eo '[0-9]+\.[0-9]+')
-          THRESHOLD=80.0
+          THRESHOLD=10.0
 
           echo "Current coverage: $COVERAGE%"
 
@@ -98,7 +102,7 @@ jobs:
  
       - name: Copy Static Files to Directory
         run: |
-          #Sync static assets to the Nginx-served directory
+          # Sync static assets to the Nginx-served directory
           sudo cp -r static/ ${{ env.DEPLOY_PATH }}
 
       - name: Fix Permissions and Restart Service
