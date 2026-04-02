@@ -45,7 +45,7 @@ func CSPMiddleware(next http.Handler) http.Handler {
 
 		ctx := context.WithValue(r.Context(), NonceKey, nonceSet)
 
-		cspHeader := fmt.Sprintf("default-src 'self'; script-src 'nonce-%s' 'nonce-%s' ; style-src 'nonce-%s' '%s';",
+		cspHeader := fmt.Sprintf("default-src 'self'; img-src 'self' blob: data:; script-src 'nonce-%s' 'nonce-%s'; style-src 'nonce-%s' '%s';",
 			nonceSet.Htmx,
 			nonceSet.ResponseTargets,
 			nonceSet.Tw,
