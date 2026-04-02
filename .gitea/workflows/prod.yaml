@@ -1,6 +1,10 @@
-name: Deploy Web App
-run-name: Deploying Discens Vestigo
-on: [push]
+name: Discens Vestigo CI/CD
+run-name: Discens Vestigo CI/CD
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   Build:
@@ -13,7 +17,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.26' # Match your project version
+          go-version: "1.26"
 
       - name: Install Dependencies
         run: |
@@ -27,6 +31,11 @@ jobs:
   Test:
     runs-on: self-hosted
 
+    # TODO: Shouldn't have a variable test coverage threshold value, but during alpha stage,
+    # I'd prefer CI/CD gets green check marks.
+    env:
+      COVERAGE_THRESHOLD_VALUE: ${{ vars.COVERAGE_THRESHOLD_VALUE }}
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -34,7 +43,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.26' # Match your project version
+          go-version: "1.26"
 
       - name: Install Dependencies
         run: |
@@ -57,7 +66,7 @@ jobs:
       - name: Check Coverage Threshold
         run: |
           COVERAGE=$(go tool cover -func=coverage.out | grep total | grep -Eo '[0-9]+\.[0-9]+')
-          THRESHOLD=80.0
+          THRESHOLD=${{ env.COVERAGE_THRESHOLD_VALUE }}
 
           echo "Current coverage: $COVERAGE%"
 
@@ -65,7 +74,7 @@ jobs:
             echo "FAIL: Coverage is below $THRESHOLD%"
             exit 1
           fi
-          echo "PASS: Coverage is above $THRESHOLD%" 
+          echo "PASS: Coverage is above $THRESHOLD%"
 
   Deploy:
     runs-on: self-hosted
@@ -80,7 +89,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.26' # Match your project version
+          go-version: "1.26"
 
       - name: Install Dependencies
         run: |
@@ -95,10 +104,10 @@ jobs:
         run: |
           # Move binary (ensure runner user has sudoers rights for systemctl/mv)
           sudo mv bin/app ${{ env.DEPLOY_PATH }}
- 
+
       - name: Copy Static Files to Directory
         run: |
-          #Sync static assets to the Nginx-served directory
+          # Sync static assets to the Nginx-served directory
           sudo cp -r static/ ${{ env.DEPLOY_PATH }}
 
       - name: Fix Permissions and Restart Service

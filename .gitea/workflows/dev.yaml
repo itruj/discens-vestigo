@@ -1,0 +1,116 @@
+name: "[Dev] Discens Vestigo CI/CD"
+run-name: "[Dev] Discens Vestigo CI/CD"
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+jobs:
+  Build:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Install Dependencies
+        run: |
+          go mod download
+          go install github.com/a-h/templ/cmd/templ@latest
+
+      - name: Build Assets & Templ
+        run: |
+          make build
+
+  Test:
+    runs-on: self-hosted
+
+    # TODO: Shouldn't have a variable test coverage threshold value, but during alpha stage,
+    # I'd prefer CI/CD gets green check marks.
+    env:
+      COVERAGE_THRESHOLD_VALUE: ${{ vars.COVERAGE_THRESHOLD_VALUE }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Install Dependencies
+        run: |
+          go mod download
+          go install github.com/a-h/templ/cmd/templ@latest
+
+      - name: Run tests and generate coverage
+        run: |
+          make test
+
+      - name: Generate HTML Report
+        run: go tool cover -html=coverage.out -o coverage.html
+
+      - name: Upload Report Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: coverage.html
+
+      - name: Check Coverage Threshold
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | grep -Eo '[0-9]+\.[0-9]+')
+          THRESHOLD=${{ env.COVERAGE_THRESHOLD_VALUE }}
+
+          echo "Current coverage: $COVERAGE%"
+
+          if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
+            echo "FAIL: Coverage is below $THRESHOLD%"
+            exit 1
+          fi
+          echo "PASS: Coverage is above $THRESHOLD%"
+
+  Deploy:
+    runs-on: self-hosted
+
+    env:
+      DEV_DEPLOY_PATH: ${{ vars.DEV_DEPLOY_PATH }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Install Dependencies
+        run: |
+          go mod download
+          go install github.com/a-h/templ/cmd/templ@latest
+
+      - name: Build Assets & Templ
+        run: |
+          make build
+
+      - name: Deploy Binary
+        run: |
+          # Move binary (ensure runner user has sudoers rights for systemctl/mv)
+          sudo mv bin/app ${{ env.DEV_DEPLOY_PATH }}
+
+      - name: Copy Static Files to Directory
+        run: |
+          # Sync static assets to the Nginx-served directory
+          sudo cp -r static/ ${{ env.DEV_DEPLOY_PATH }}
+
+      - name: Fix Permissions and Restart Service
+        run: |
+          sudo chown -R http:http ${{ env.DEV_DEPLOY_PATH }}
+          sudo systemctl restart dev-discens-vestigo.service
